@@ -1,5 +1,7 @@
 # status-testv2 — deploy na GitHub Pages + Web Push (instrukcja)
 
+WIP WIP WIP WIP WIP WIP WIP 
+
 Krótko i praktycznie:
 
 1) Stwórz repo na GitHub (np. `status-testv2`) i wrzuć pliki:
