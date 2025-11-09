@@ -16,10 +16,13 @@
   }
   html,body{height:100%;}
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:var(--bg); color:var(--text); padding:12px; font-size:var(--base-font)}
+
+  /* compact layout */
   .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
   header{display:flex;align-items:center;gap:8px}
   h1{font-size:1rem;margin:0}
   .meta{font-size:var(--small-font); color:var(--muted)}
+
   .row{display:flex;gap:8px;align-items:center}
   .panel{display:flex;gap:8px;flex-wrap:wrap;padding:8px;background:var(--panel);border-radius:var(--radius);box-shadow:0 1px 2px rgba(0,0,0,0.04)}
   select,input,button,textarea{padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.08);background:transparent;color:var(--text);font-size:13px}
@@ -27,23 +30,32 @@
   .kpi{display:flex;gap:8px;align-items:center}
   .kpi .box{background:var(--card);padding:6px 8px;border-radius:6px;font-size:12px}
   .kpi .num{font-weight:700}
+
   .list{background:transparent;margin-top:6px}
   .place{display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:6px;background:var(--panel);margin-bottom:6px}
   .square{width:14px;height:14px;border-radius:3px;flex:0 0 14px;margin-top:4px}
-  .green{background:var(--bad)} .red{background:var(--ok)}
+  .green{background:var(--bad)} .red{background:var(--ok)} /* preserved original inverted colors intentionally left as-is */
   .name{font-weight:600;font-size:13px}
   .sub{font-size:12px;color:var(--muted)}
   .debug{font-size:12px;color:var(--muted);margin-top:6px}
+
+  /* header controls */
   .controls{display:flex;gap:8px;align-items:center}
   .small{font-size:12px;color:var(--muted)}
+
+  /* compact select width adjustments */
   #serverSelect{min-width:220px}
   #serverField{min-width:180px}
   #btnReconnect{padding:6px 8px}
+
+  /* theme toggle */
   .themeToggle{display:flex;align-items:center;gap:6px}
   .toggleBtn{width:36px;height:20px;border-radius:12px;background:#ddd;position:relative;cursor:pointer}
   .toggleKnob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:all .18s}
   .toggleBtn.active{background:#3b82f6}
   .toggleBtn.active .toggleKnob{left:18px}
+
+  /* responsive */
   @media (max-width:800px){
     .kpi{display:none}
     #serverSelect{min-width:140px}
@@ -90,77 +102,100 @@
   <div id="list" class="list"></div>
 
   <div class="debug">Ostatnia aktualizacja: <span id="lastUpdate">—</span> · Graczy w ostatnim pakiecie: <span id="playersCount">0</span></div>
-
-  <!-- POWIADOMIENIA -->
-  <div class="panel" style="margin-top:10px;">
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div class="small">Powiadomienia push (przeglądarka)</div>
-      <div>
-        <button id="btnEnablePush">Włącz powiadomienia</button>
-        <span id="pushStatus" class="small" style="margin-left:8px;color:var(--muted)">status: wyłączone</span>
-      </div>
-      <div class="small">Po włączeniu subskrypcja zostanie wysłana do serwera (endpoint /subscribe).</div>
-    </div>
-  </div>
-
 </div>
 
 <script>
-/* --- oryginalny kod (skrócony/niezmieniony w logice) --- */
-/* ... cały Twój dotychczasowy skrypt wszytko tutaj (skopiuj zawartość z pierwotnego pliku) ... */
-/* Dla czytelności poniżej wyrzuciłem długi skrypt; wklej swój oryginalny skrypt tu. */
+/* preserved WATCHED exactly as requested */
+const WATCHED = [
+  { id: "AB", name: "AB", x: -21505, y: -6632, radius: 70 },
+  { id: "BL", name: "BL", x: -19071, y: -4972, radius: 35 },
+  { id: "FM", name: "FM (- token)", x: -16430, y: -4047, radius: 16 },
+  { id: "SAT", name: "SAT", x: -7283, y: -2965, radius: 14 },
+  { id: "DE", name: "DE", x: 852, y: 222, radius: 24 },
+  { id: "CH", name: "CH", x: 4384, y: -2606, radius: 16 },
+  { id: "DC", name: "DC", x: 3061, y: 652, radius: 30 },
+  { id: "GE", name: "GE", x: 1557, y: 3285, radius: 14 },
+  { id: "MW", name: "MW", x: -4642, y: 5790, radius: 12 },
+  { id: "MC", name: "MC", x: 7689, y: 2180, radius: 15 },
+  { id: "CC", name: "CC", x: 9976, y: 5153, radius: 15 },
+  { id: "GJ", name: "GJ", x: 11660, y: 8038, radius: 10 },
+  { id: "MS", name: "MS", x: 10440, y: -614, radius: 30 },
+];
 
-/* --- KOD POWIADOMIEN PUSH (prosta obsługa klienta) --- */
-const PUBLIC_VAPID_KEY = '<YOUR_PUBLIC_VAPID_KEY>'; // <- wstaw tu publiczny klucz VAPID po wygenerowaniu
+// keep core WS URL
+const WS_URL = 'wss://map.dovedale.wiki/ws';
 
-async function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
+// DOM refs
+const dom = {
+  list: document.getElementById('list'),
+  lastUpdate: document.getElementById('lastUpdate'),
+  playersCount: document.getElementById('playersCount'),
+  connState: document.getElementById('connState'),
+  btnReconnect: document.getElementById('btnReconnect'),
+  serverSelect: document.getElementById('serverSelect'),
+  serverField: document.getElementById('serverField'),
+  kpiPlayers: document.getElementById('kpiPlayers'),
+  kpiServers: document.getElementById('kpiServers'),
+  kpiUpdated: document.getElementById('kpiUpdated'),
+  themeBtn: document.getElementById('themeBtn'),
+};
 
-async function registerServiceWorkerAndSubscribe() {
-  if (!('serviceWorker' in navigator)) return alert('Service Worker nie jest dostępny w tej przeglądarce.');
-  if (!('PushManager' in window)) return alert('Push API nie jest dostępne w tej przeglądarce.');
+let ws = null; let reconnectTimer = null;
+const servers = new Map(); let selectedServer = localStorage.getItem('selectedServer') || '';
+const guessedFieldCandidates = ['server','serverId','world','map','shard','instance','realm','source','srv','region','name','meta.server','meta.world'];
 
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('SW zarejestrowany', reg);
+function _log(...args){ console.log('[status]',...args); }
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      document.getElementById('pushStatus').textContent = 'status: brak zgody na powiadomienia';
-      return;
-    }
+function setConnState(connected){ dom.connState.innerHTML = connected ? '<span style="color:var(--ok)">połączony</span>' : '<span style="color:#b00">rozłączony</span>'; }
 
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-    });
-
-    // wyślij subskrypcję do serwera
-    await fetch('/subscribe', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(sub)
-    });
-
-    document.getElementById('pushStatus').textContent = 'status: subskrybowano';
-  } catch (err) {
-    console.error('Błąd podczas subskrypcji push', err);
-    document.getElementById('pushStatus').textContent = 'status: błąd';
-  }
-}
-
-document.getElementById('btnEnablePush').addEventListener('click', async ()=>{
-  await registerServiceWorkerAndSubscribe();
+document.getElementById('serverSelect').addEventListener('change', ()=>{
+  selectedServer = dom.serverSelect.value; persistSelection(); const players = lastPlayersForSelected(); renderStatus(players); updateKpis(players);
 });
 
-// THEMING: dark/light toggle (jak w oryginale)
-(function(){ const themeBtn=document.getElementById('themeBtn'); function apply(dark){ if(dark){ document.documentElement.classList.add('dark'); themeBtn.classList.add('active'); } else { document.documentElement.classList.remove('dark'); themeBtn.classList.remove('active'); } try{ localStorage.setItem('theme', dark? 'dark':'light'); }catch(e){} }
+dom.serverField.addEventListener('change', ()=>{ try{ localStorage.setItem('serverField', dom.serverField.value.trim()); }catch(e){} });
+
+dom.btnReconnect.addEventListener('click', ()=>{ if(ws) ws.close(); connect(); });
+
+function getByPath(obj,path){ if(!obj||!path) return undefined; const parts=path.split('.'); let cur=obj; for(const p of parts){ if(cur==null) return undefined; cur = cur[p]; } return cur; }
+
+function detectServerKey(msg){ const manualPath = (dom.serverField.value||'').trim(); if(manualPath){ const v = getByPath(msg, manualPath); if(v!=null) return String(v); } for(const c of guessedFieldCandidates){ const v = getByPath(msg,c); if(v!=null) return String(v); } if(msg && msg.jobId) return String(msg.jobId); return 'unknown'; }
+
+function ensureServerOption(key){ if(!key) return; if(Array.from(dom.serverSelect.options).some(o=>o.value===key)) return; const opt=document.createElement('option'); opt.value=key; opt.textContent=key; dom.serverSelect.appendChild(opt); updateServersCountUI(); if(!selectedServer){ selectedServer=key; dom.serverSelect.value=key; persistSelection(); }}
+
+function updateServersCountUI(){ const count = Array.from(dom.serverSelect.options).filter(o=>o.value).length; dom.kpiServers.textContent = count; }
+
+function lastPlayersForSelected(){ if(!selectedServer) return []; const rec = servers.get(selectedServer); return rec && Array.isArray(rec.players)? rec.players : []; }
+
+function connect(){ if(ws){ try{ ws.close(); }catch(e){} ws=null; } setConnState(false); _log('Łączenie do',WS_URL); try{ ws = new WebSocket(WS_URL); }catch(e){ _log('Błąd tworzenia WS',e); scheduleReconnect(); return; }
+  ws.onopen = ()=>{ _log('WS open'); setConnState(true); if(reconnectTimer){ clearTimeout(reconnectTimer); reconnectTimer=null; } };
+  ws.onclose = ()=>{ _log('WS close'); setConnState(false); scheduleReconnect(); };
+  ws.onerror = (err)=>{ _log('WS err',err); };
+  ws.onmessage = (ev)=>{ let obj=null; try{ obj = JSON.parse(ev.data);}catch(e){ _log('JSON parse err',ev.data); return; } if(!obj) return; const players = obj.players ?? obj.list ?? obj.clients ?? []; const key = detectServerKey(obj); servers.set(key,{players,t:Date.now()}); ensureServerOption(key); updateServersCountUI(); if(selectedServer===key){ renderStatus(players); updateKpis(players);} if(!selectedServer){ selectedServer = key; dom.serverSelect.value = key; persistSelection(); renderStatus(players); updateKpis(players);} };
+}
+
+function scheduleReconnect(){ if(reconnectTimer) return; reconnectTimer=setTimeout(()=>{ reconnectTimer=null; connect(); }, 3000); }
+
+function persistSelection(){ try{ localStorage.setItem('selectedServer', selectedServer); }catch(e){} }
+
+function updateKpis(players){ const cnt = Array.isArray(players)? players.length:0; dom.kpiPlayers.textContent = cnt; dom.kpiUpdated.textContent = new Date().toLocaleTimeString(); dom.playersCount.textContent = cnt; dom.lastUpdate.textContent = new Date().toLocaleTimeString(); }
+
+// distance and matching (unchanged)
+function distance(aX,aY,bX,bY){ const dx=aX-bX, dy=aY-bY; return Math.sqrt(dx*dx+dy*dy); }
+function isPlayerAtPlace(player,place){ if(!player) return false; const pos = player.position ?? player.pos ?? player.location ?? null; if(pos && typeof pos.x==='number' && typeof pos.y==='number' && typeof place.x==='number' && typeof place.y==='number'){ return distance(pos.x,pos.y,place.x,place.y) <= (place.radius ?? 100); } return false; }
+
+function renderStatus(players){ dom.list.innerHTML=''; WATCHED.forEach(place=>{ const presentPlayers = (Array.isArray(players)? players.filter(p=>isPlayerAtPlace(p,place)) : []); const present = presentPlayers.length>0; const div=document.createElement('div'); div.className='place'; const sq=document.createElement('div'); sq.className='square '+(present? 'green':'red'); div.appendChild(sq); const txt=document.createElement('div'); const nm=document.createElement('div'); nm.className='name'; nm.textContent = place.name + (present ? ' — zajęte':' — puste'); txt.appendChild(nm); const sub=document.createElement('div'); sub.className='sub'; if(present){ const names = presentPlayers.slice(0,5).map(p=>p.username ?? p.name ?? 'gracz').join(', '); sub.textContent = `Gracz(e): ${names}`; } else { sub.textContent = `Brak graczy w promieniu ${place.radius ?? 100} jednostek`; } txt.appendChild(sub); div.appendChild(txt); dom.list.appendChild(div); }); }
+
+// restore saved serverField/selection and start
+function restoreState(){ try{ const sf = localStorage.getItem('serverField'); if(sf) dom.serverField.value = sf; }catch(e){} try{ const sel = localStorage.getItem('selectedServer'); if(sel) selectedServer = sel; }catch(e){} }
+restoreState();
+connect();
+
+// expose debug
+window.__statusDebug = { connect, servers, selectedServer, detectServerKey, lastPlayersForSelected };
+
+// THEMING: dark/light toggle
+(function(){ const themeBtn=document.getElementById('themeBtn'); const body=document.getElementById('bodyRoot'); function apply(dark){ if(dark){ document.documentElement.classList.add('dark'); themeBtn.classList.add('active'); } else { document.documentElement.classList.remove('dark'); themeBtn.classList.remove('active'); } try{ localStorage.setItem('theme', dark? 'dark':'light'); }catch(e){} }
+  // init from localStorage or prefers-color-scheme
   try{ const saved = localStorage.getItem('theme'); if(saved) apply(saved==='dark'); else apply(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }catch(e){ apply(false); }
   themeBtn.addEventListener('click', ()=>{ const isDark = document.documentElement.classList.contains('dark'); apply(!isDark); });
 })();
